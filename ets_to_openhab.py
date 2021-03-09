@@ -1,5 +1,9 @@
 import csv
 import os.path
+import json
+
+with open('config.json') as f:
+    config = json.load(f)
 
 def data_of_name(data, name):
     for x in data:
@@ -7,9 +11,7 @@ def data_of_name(data, name):
             return x
     return None
 
-openhabdir = '../../openhab'
-csvfile = open('../ets_gruppenadressen.csv', newline='', encoding='cp1252')
-
+csvfile = open(config['ets_export'], newline='', encoding='cp1252')
 reader = csv.DictReader(csvfile, delimiter='\t')
 
 house = {}
@@ -51,7 +53,6 @@ for floorNr in house.keys():
         addresses = house[floorNr]['rooms'][roomNr]['Addresses']
 
         for i in range(len(addresses)):
-
             used = False
 
             address = house[floorNr]['rooms'][roomNr]['Addresses'][i]
@@ -66,26 +67,16 @@ for floorNr in house.keys():
             item_name = f"i_{cnt}_{house[floorNr]['Group name']}_{house[floorNr]['rooms'][roomNr]['Group name']}_{lovely_name}".replace('/','_').replace(' ','_')
             item_name = item_name.replace('ü','ue').replace('ä','ae').replace('ß','ss')
             
-            semantic = False
             # temperatur
             if address['DatapointType'] == 'DPST-9-1':
                 used = True
-                thing_type = 'number'
-                thigs_group_adresses = address['Address']
-
-                item_type = 'Number'
-                item_Description = f"{lovely_name} [%.1f °C]"
-                item_icon = 'temperature'
-                semantic = True
-                #things += f"Type number        : {item_name}        \"{address['Group name']}\" @ {roomName}       [ ga=\"{address['Address']}\" ]\n"
-                #items += f"Number        {item_name}         \"{lovely_name} [%.1f °C]\"                <temperature>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-
-
+                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
+                items += f"Number        {item_name}         \"{lovely_name} [%.1f °C]\"                <temperature>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
 
             # umschalten (licht, steckdosen)
             if address['DatapointType'] == 'DPST-1-1':
-                if not address['Group name'].endswith(' Status'):
-                    status = data_of_name(addresses, address['Group name'] + ' Status')
+                if not address['Group name'].endswith(' '+config['defines']['switch']['status_suffix']):
+                    status = data_of_name(addresses, address['Group name'] + ' ' + config['defines']['switch']['status_suffix'])
                     if status:
                         used = True
                         used_addresses.append(status['Address'])
@@ -95,20 +86,19 @@ for floorNr in house.keys():
                         lovely_name = ' '.join(lovely_name.replace('Licht','').replace('Steckdose','').split())
                         things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}+<{status['Address']}\" ]\n"
                         items += f"Switch        {item_name}         \"{lovely_name}\"               <{typ}>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    
+
             # dimmer
-            if address['Group name'].endswith('Dimmen absolut'):
-                basename = address['Group name'].replace('Dimmen absolut','')
-                schalten = data_of_name(addresses, basename + 'Schalten')
-                dimmen_relativ = data_of_name(addresses, basename + 'Dimmen relativ')
-                schalten_status = data_of_name(addresses, basename + 'Status Ein/Aus')
-                dimmwert_status = data_of_name(addresses, basename + 'Status Dimmwert')
-                if dimmen_relativ and schalten and schalten_status and dimmwert_status:
+            if address['Group name'].endswith(config['defines']['dimmer']['absolut_suffix']):
+                basename = address['Group name'].replace(config['defines']['dimmer']['absolut_suffix'],'')
+                dimmwert_status = data_of_name(addresses, basename + config['defines']['dimmer']['status_suffix'])
+                if dimmwert_status:
                     used = True
-                    used_addresses.append(dimmen_relativ['Address'])
-                    used_addresses.append(schalten['Address'])
-                    used_addresses.append(schalten_status['Address'])
                     used_addresses.append(dimmwert_status['Address'])
+                    # drop possible unused GAs
+                    for drop_name in config['defines']['dimmer']['drop']:
+                        drop_addr = data_of_name(addresses, basename + drop_name)
+                        if drop_addr:
+                             used_addresses.append(drop_addr['Address'])
 
                     lovely_name = ' '.join(lovely_name.replace('Dimmen','').replace('Dimmer','').replace('absolut','').replace('Licht','').split())
                     things += f"Type dimmer        : {item_name}        \"{address['Group name'].replace('absolut','')}\"        "
@@ -152,11 +142,9 @@ for floorNr in house.keys():
                     print(f"incomplete rollershutter: {basename}")
             
             # Fensterkontakte
-            if 'Fensterkontakt' in address['Group name']:
+            if config['defines']['contact']['suffix'] in address['Group name']:
                 used = True
-                lovely_name = ' '.join(lovely_name.replace('Fensterkontakt','').split())
-                #things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
-                #items += f"Switch        {item_name}         \"{lovely_name}\"               <contact>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                lovely_name = ' '.join(lovely_name.replace(config['defines']['contact']['suffix'],'').split())
                 things += f"Type contact        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\"]\n"
                 items += f"Contact        {item_name}         \"{lovely_name}\"               <contact>  (map{floorNr}_{roomNr})       {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                 fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
@@ -205,9 +193,7 @@ for floorNr in house.keys():
                 print(address)
                 used = True
                 mappings=''
-                #if 'mappings' in address['Description']:
-                #    #TODO: split other values
-                #    mappings = address['Description']
+
                 things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ga=\"17.001:{address['Address']}\"]\n"
                 
                 if 'mappings' in address['Description']:
@@ -219,12 +205,10 @@ for floorNr in house.keys():
                     items += f"Number        {item_name}         \"{lovely_name} [MAP({mapfile}):%s]\"               <movecontrol>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                     mapfile_content = mappings.replace('"','').replace(',','\n').replace('mappings=[','').replace(']','').replace(' ','')
                     mapfile_content += '\n' + mapfile_content.replace('=','.0=') + '\n-=unknown'
-                    open(f"{openhabdir}/transform/{mapfile}",'w').write(mapfile_content)
+                    open(os.path.join(config['transform_dir_path'], mapfile),'w').write(mapfile_content)
                 else:
                     items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <movecontrol>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                 
-                
-                    
             # Szenensteuerung
             #if address['DatapointType'] == 'DPST-18-1':
             #    print(address)
@@ -239,14 +223,6 @@ for floorNr in house.keys():
                     things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
                     items += f"Switch        {item_name}         \"{lovely_name}\"               <moon>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
             
-            if semantic:
-                semantic_things += f"Thing device device_{semantic_cnt} \"lovely_name\" @ \"{roomName}\" [ \n"
-                semantic_things += " ] { \n"
-                semantic_things += f"   Type {thing_type}        : {item_name}        \"{address['Group name']}\"       [ ga=\"{thigs_group_adresses}\" ]\n"
-                semantic_things += " } \n"
-                items += f"{item_type}        {item_name}         \"{item_Description}\"                <{item_icon}>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:device_{semantic_cnt}:{item_name}\" }}\n"
-                semantic_cnt += 1
-
             if used:
                 used_addresses.append(address['Address'])
             if 'influx' in address['Description']:
@@ -291,10 +267,10 @@ for floorNr in house.keys():
 # export things:
 things_template = open('things.template','r').read()
 things = things_template.replace('###things###', things)
-open('../../openhab/things/knx.things','w').write(things)
+open(config['things_path'],'w').write(things)
 # export items:
 items = 'Group           Home                  "Our Home"                                     [\"Location\"]\n' + items
-open('../../openhab/items/knx.items','w').write(items)
+open(config['items_path'],'w').write(items)
 
 # export sitemap:
 sitemap_template_file = 'sitemap.template'
@@ -303,7 +279,7 @@ if os.path.isfile(f"private_{sitemap_template_file}"):
 sitemap_template = open(sitemap_template_file,'r').read()
 sitemap = sitemap_template.replace('###sitemap###', sitemap)
 sitemap = sitemap.replace('###selections###', selections)
-open('../../openhab/sitemaps/knx.sitemap','w').write(sitemap)
+open(config['sitemaps_path'],'w').write(sitemap)
 
 #export persistent
 private_persistence = ''
@@ -322,31 +298,31 @@ for i in export_to_influx:
     persist += f"{i}: strategy = everyUpdate\n"
 persist += private_persistence + '\n}'
 
-open('../../openhab/persistence/influxdb.persist','w').write(persist)
+open(config['influx_path'],'w').write(persist)
 
 
-print(fensterkontakte)
-fenster_rule = ''
-for i in fensterkontakte:
-    fenster_rule += f'var save_fk_count_{i["item_name"]} = 0 \n'
-fenster_rule += '''
-rule "fensterkontakt check"
-when
-    Time cron "0 * * * * ? *"
-then
-'''
-for i in fensterkontakte:
-    fenster_rule += f'    if({i["item_name"]}.state == OPEN){{ \n'
-    fenster_rule += f'         save_fk_count_{i["item_name"]} += 1\n'
-    fenster_rule += f'         if(save_fk_count_{i["item_name"]} == 15) {{\n'
-    fenster_rule +=  '             val telegramAction = getActions("telegram","telegram:telegramBot:Telegram_Bot"); \n'
-    fenster_rule += f'             telegramAction.sendTelegram("{i["name"]} seit über 15 Minuten offen!");\n'
-    fenster_rule +=  '         }\n'
-    fenster_rule +=  '    } else { \n'
-    fenster_rule += f'        save_fk_count_{i["item_name"]} = 0; \n'
-    fenster_rule +=  '    } \n'
-fenster_rule += '''
-end
-'''
-
-open('../../openhab/rules/fenster.rules','w').write(fenster_rule)
+#print(fensterkontakte)
+#fenster_rule = ''
+#for i in fensterkontakte:
+#    fenster_rule += f'var save_fk_count_{i["item_name"]} = 0 \n'
+#fenster_rule += '''
+#rule "fensterkontakt check"
+#when
+#    Time cron "0 * * * * ? *"
+#then
+#'''
+#for i in fensterkontakte:
+#    fenster_rule += f'    if({i["item_name"]}.state == OPEN){{ \n'
+#    fenster_rule += f'         save_fk_count_{i["item_name"]} += 1\n'
+#    fenster_rule += f'         if(save_fk_count_{i["item_name"]} == 15) {{\n'
+#    fenster_rule +=  '             val telegramAction = getActions("telegram","telegram:telegramBot:Telegram_Bot"); \n'
+#    fenster_rule += f'             telegramAction.sendTelegram("{i["name"]} seit über 15 Minuten offen!");\n'
+#    fenster_rule +=  '         }\n'
+#    fenster_rule +=  '    } else { \n'
+#    fenster_rule += f'        save_fk_count_{i["item_name"]} = 0; \n'
+#    fenster_rule +=  '    } \n'
+#fenster_rule += '''
+#end
+#'''
+#
+#open('../../openhab/rules/fenster.rules','w').write(fenster_rule)
