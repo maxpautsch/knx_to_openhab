@@ -51,6 +51,7 @@ for floorNr in house.keys():
         visibility = ''
         if 'debug' in description:
             visibility = 'visibility=[extended_view==ON]'
+
         items += f"Group           map{floorNr}_{roomNr}                     \"{roomName}\"             (map{floorNr})                    [\"Location\"] \n"
         sitemap += f"     Group item=map{floorNr}_{roomNr} {visibility} label=\"{roomName}\" "
         group = ""
@@ -63,7 +64,7 @@ for floorNr in house.keys():
             address = house[floorNr]['rooms'][roomNr]['Addresses'][i]
             lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['Group name'],'').replace(house[floorNr]['rooms'][roomNr]['Group name'],'').split())
             
-            description = house[floorNr]['rooms'][roomNr]['Description'].split(',')
+            description = address['Description'].split(',')
             visibility = ''
             if 'debug' in description:
                 visibility = 'visibility=[extended_view==ON]'
@@ -82,7 +83,7 @@ for floorNr in house.keys():
                 used = True
                 things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
                 items += f"Number        {item_name}         \"{lovely_name} [%.1f °C]\"                <temperature>         {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default        item={item_name} label=\"{lovely_name} [%.1f °C]\" {visibility}\n"
+                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f °C]\" {visibility}\n"
             
             # umschalten (licht, steckdosen)
             if address['DatapointType'] == 'DPST-1-1':
@@ -96,7 +97,10 @@ for floorNr in house.keys():
                             typ = 'poweroutlet'
                         if 'Audio' in address['Group name']:
                             typ = 'soundvolume'
-                        lovely_name = ' '.join(lovely_name.replace('Licht','').replace('Steckdose','').split())
+                        # remove generic description if unneccessary
+                        lovely_name_short = ' '.join(lovely_name.replace('Licht','').replace('Steckdose','').replace('Steckdosen','').split())
+                        if lovely_name_short != '':
+                            lovely_name = lovely_name_short
                         things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}+<{status['Address']}\" ]\n"
                         items += f"Switch        {item_name}         \"{lovely_name}\"               <{typ}>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                         group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
@@ -160,7 +164,10 @@ for floorNr in house.keys():
             # Fensterkontakte
             if config['defines']['contact']['suffix'] in address['Group name']:
                 used = True
-                lovely_name = ' '.join(lovely_name.replace(config['defines']['contact']['suffix'],'').split())
+                # shorten name if possible
+                lovely_name_short = ' '.join(lovely_name.replace(config['defines']['contact']['suffix'],'').split())
+                if lovely_name_short != '':
+                    lovely_name = lovely_name_short
                 things += f"Type contact        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\"]\n"
                 items += f"Contact        {item_name}         \"{lovely_name}\"               <contact>         {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                 group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
@@ -252,8 +259,8 @@ for floorNr in house.keys():
             if used:
                 used_addresses.append(address['Address'])
             if 'influx' in address['Description']:
-                print('influx @ ')
-                print(address)
+                #print('influx @ ')
+                #print(address)
                 export_to_influx.append(item_name)
 
         if group != '':
@@ -282,7 +289,8 @@ for floorNr in house.keys():
                 if address['DatapointType'] == 'DPST-1-1':
                     #print('^- processed as switch\n')
                     things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
-                    items += f"Switch        {item_name}         \"{lovely_name}\"               <switch>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                    items += f"Switch        {item_name}         \"{lovely_name}\"               <switch>    (map{floorNr}_{roomNr})       {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                    group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
 
             #    if address['Group name'].endswith('Status'):
             #        if address['DatapointType'] == 'DPST-1-1':

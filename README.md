@@ -8,9 +8,12 @@ Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperat
 - edit `config.json`
 - run `python3 ets_to_openhab.py`
 
-## Persistence
+## ETS description field
 
-add 'influx' as description of GA within ETS to automatically save the values to influxDB.
+there are some addons based on the description field of the GA in ETS.
+- add `influx` to automatically save the values to influxDB.
+- add `debug` to add a visibility tag to a element. Use item `extended_view` to change visibility.
+- scene mappings: see below
 
 ## Processed types:
 - Temperature  based on Datatype
