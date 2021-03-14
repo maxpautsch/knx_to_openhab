@@ -1,8 +1,8 @@
 # knx_to_openhab
-Generate openhab configuration based on ETS export
+Generate openhab configuration (semantic model as also sitemap for basicui) based on ETS export
 
 ## Export GAs:
-Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperator Tabulator.
+Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperator Tabulator. The GAs should follow the scheme floor/room/message.
 
 ## Run
 - edit `config.json`
@@ -10,10 +10,13 @@ Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperat
 
 ## ETS description field
 
-there are some addons based on the description field of the GA in ETS.
+there are some addons based on the description field of the GA in ETS. Multiple options are seperated by a semicolon.
 - add `influx` to automatically save the values to influxDB.
 - add `debug` to add a visibility tag to a element. Use item `extended_view` to change visibility.
 - scene mappings: see below
+- add `location` to add the [location](https://github.com/openhab/openhab-core/blob/main/bundles/org.openhab.core.semantics/model/SemanticTags.csv) to the first two layers of group addresses. Divide multiple by `,` 
+- add `semantic` to overwrite the default entries. (e.g. if a switch is controlling a projector: semantic=Projector). [Possible options](https://github.com/openhab/openhab-core/blob/main/bundles/org.openhab.core.semantics/model/SemanticTags.csv). Divide multiple by `,`  
+- add `icon` to set the icon. e.g. `icon=projector`
 
 ## Processed types:
 - Temperature  based on Datatype

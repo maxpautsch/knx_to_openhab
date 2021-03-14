@@ -47,27 +47,32 @@ for floorNr in house.keys():
     sitemap += f"Frame label=\"{house[floorNr]['Group name']}\" {{\n"
     for roomNr in house[floorNr]['rooms'].keys():
         roomName = house[floorNr]['rooms'][roomNr]['Group name']
-        description = house[floorNr]['rooms'][roomNr]['Description']
+        descriptions = house[floorNr]['rooms'][roomNr]['Description'].split(';')
         visibility = ''
-        if 'debug' in description:
-            visibility = 'visibility=[extended_view==ON]'
+        location = ''
+        for description in descriptions:
+            if description == 'debug':
+                visibility = 'visibility=[extended_view==ON]'
+            if description.startswith('location='):
+                location = '["' + description.replace('location=','').replace(',','","') + '"] '
+        
 
-        items += f"Group           map{floorNr}_{roomNr}                     \"{roomName}\"             (map{floorNr})                    [\"Location\"] \n"
-        sitemap += f"     Group item=map{floorNr}_{roomNr} {visibility} label=\"{roomName}\" "
+        items += f"Group   map{floorNr}_{roomNr}   \"{roomName}\"   (map{floorNr})   {location}\n"
+        sitemap += f"     Group item=map{floorNr}_{roomNr} {visibility} label=\"{roomName} \" "
         group = ""
 
         addresses = house[floorNr]['rooms'][roomNr]['Addresses']
 
         for i in range(len(addresses)):
             used = False
-
+            auto_add = False
+            item_icon = None
+            sitemap_type = 'Default'
+            
             address = house[floorNr]['rooms'][roomNr]['Addresses'][i]
             lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['Group name'],'').replace(house[floorNr]['rooms'][roomNr]['Group name'],'').split())
             
-            description = address['Description'].split(',')
-            visibility = ''
-            if 'debug' in description:
-                visibility = 'visibility=[extended_view==ON]'
+            descriptions = address['Description'].split(';')
 
             #print(f"--- processing: {lovely_name}")
             #print(address)
@@ -78,32 +83,6 @@ for floorNr in house.keys():
             item_name = f"i_{cnt}_{house[floorNr]['Group name']}_{house[floorNr]['rooms'][roomNr]['Group name']}_{lovely_name}".replace('/','_').replace(' ','_')
             item_name = item_name.replace('ü','ue').replace('ä','ae').replace('ß','ss')
             
-            # temperatur
-            if address['DatapointType'] == 'DPST-9-1':
-                used = True
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f °C]\"                <temperature>         {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f °C]\" {visibility}\n"
-            
-            # umschalten (licht, steckdosen)
-            if address['DatapointType'] == 'DPST-1-1':
-                if not address['Group name'].endswith(' '+config['defines']['switch']['status_suffix']):
-                    status = data_of_name(addresses, address['Group name'] + ' ' + config['defines']['switch']['status_suffix'])
-                    if status:
-                        used = True
-                        used_addresses.append(status['Address'])
-                        typ = 'light'
-                        if 'Steckdose' in address['Group name']:
-                            typ = 'poweroutlet'
-                        if 'Audio' in address['Group name']:
-                            typ = 'soundvolume'
-                        # remove generic description if unneccessary
-                        lovely_name_short = ' '.join(lovely_name.replace('Licht','').replace('Steckdose','').replace('Steckdosen','').split())
-                        if lovely_name_short != '':
-                            lovely_name = lovely_name_short
-                        things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}+<{status['Address']}\" ]\n"
-                        items += f"Switch        {item_name}         \"{lovely_name}\"               <{typ}>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                        group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
 
             # dimmer
             if address['Group name'].endswith(config['defines']['dimmer']['absolut_suffix']):
@@ -121,8 +100,67 @@ for floorNr in house.keys():
                     lovely_name = ' '.join(lovely_name.replace('Dimmen','').replace('Dimmer','').replace('absolut','').replace('Licht','').split())
                     things += f"Type dimmer        : {item_name}        \"{address['Group name'].replace('absolut','')}\"        "
                     things += f"[ position=\"{address['Address']}+<{dimmwert_status['Address']}\"]\n"
-                    items += f"Dimmer        {item_name}         \"{lovely_name} [%d %%]\"               <light>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                    items += f"Dimmer        {item_name}         \"{lovely_name} [%d %%]\"               <light>  (map{floorNr}_{roomNr})    [\"Lightbulb\"]    {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                     group += f"        Default item={item_name} label=\"{lovely_name} [%d %%]\" {visibility}\n"
+
+            # Schalten, Präsenz, Nachtmodus oder Fensterkontakte
+            if address['DatapointType'] == 'DPST-1-1':
+                item_type = "Switch"
+                thing_address_info = f"ga=\"{address['Address']}\""
+                item_label = lovely_name
+                if 'Präsenz' in address['Group name']:
+                    auto_add = True
+                    semantic_info = "[\"MotionDetector\", \"Presence\"]"
+                    item_icon = "motion" 
+                if 'Nachtmodus' in address['Group name']:
+                    auto_add = True
+                    semantic_info = "[\"Control\"]"
+                    item_icon = "moon" 
+                if config['defines']['contact']['suffix'] in address['Group name']:
+                    item_type = "Contact"
+                    auto_add = True
+                    semantic_info = "[\"Window\", \"OpenState\"]"
+                    # shorten name if possible
+                    lovely_name_short = ' '.join(lovely_name.replace(config['defines']['contact']['suffix'],'').split())
+                    if lovely_name_short != '':
+                        lovely_name = lovely_name_short
+                    fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
+                # umschalten (Licht, Steckdosen)
+                if not address['Group name'].endswith(' '+config['defines']['switch']['status_suffix']):
+                    status = data_of_name(addresses, address['Group name'] + ' ' + config['defines']['switch']['status_suffix'])
+                    if status:
+                        auto_add = True
+                        used_addresses.append(status['Address'])
+                        
+                        semantic_info = "[\"Lightbulb\"]"
+                        item_icon = 'light'
+                        if 'Steckdose' in address['Group name']:
+                            semantic_info = "[\"PowerOutlet\"]"
+                            item_icon = 'poweroutlet'
+                        if 'Audio' in address['Group name']:
+                            semantic_info = "[\"Speaker\"]"
+                            item_icon = 'soundvolume'
+                        # remove generic description if unneccessary
+                        lovely_name_short = ' '.join(lovely_name.replace('Licht','').replace('Steckdose','').replace('Steckdosen','').split())
+                        if lovely_name_short != '':
+                            lovely_name = lovely_name_short
+                        #things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}+<{status['Address']}\" ]\n"
+                        #items += f"Switch        {item_name}         \"{lovely_name}\"               <{typ}>  (map{floorNr}_{roomNr})     [\"{semantic_type}\"]      {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                        #group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
+
+        ######## determined by datapoint
+            # temperatur
+            if address['DatapointType'] == 'DPST-9-1':
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"9.001:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f °C]"
+
+                semantic_info = "[\"Measurement\", \"Temperature\"]"
+                if 'Soll' in lovely_name:
+                    semantic_info = "[\"Setpoint\", \"Temperature\"]"
+                
+                item_icon = "temperature" 
 
             # rollos / jalousien
             if address['DatapointType'] == 'DPST-1-8':
@@ -155,68 +193,62 @@ for floorNr in house.keys():
                     used_addresses.append(absolute_position['Address'])
                     used_addresses.append(absolute_position_status['Address'])
 
-                    things += f"Type rollershutter : {item_name} [ upDown=\"{fahren_auf_ab['Address']}\", stopMove=\"{fahren_stop['Address']}\", position=\"{absolute_position['Address']}+<{absolute_position_status['Address']}\" ]\n"
-                    items += f"Rollershutter        {item_name}         \"{lovely_name} [%d %%]\"            {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    group += f"        Default item={item_name} label=\"{lovely_name} [%d %%]\" {visibility}\n"
+                    auto_add = True
+                    item_type = "Rollershutter"
+                    thing_address_info = f"upDown=\"{fahren_auf_ab['Address']}\", stopMove=\"{fahren_stop['Address']}\", position=\"{absolute_position['Address']}+<{absolute_position_status['Address']}\""
+                    item_label = f"{lovely_name} [%d %%]"
+                    semantic_info = "[\"Blinds\"]"
                 else:
                     print(f"incomplete rollershutter: {basename}")
-            
-            # Fensterkontakte
-            if config['defines']['contact']['suffix'] in address['Group name']:
-                used = True
-                # shorten name if possible
-                lovely_name_short = ' '.join(lovely_name.replace(config['defines']['contact']['suffix'],'').split())
-                if lovely_name_short != '':
-                    lovely_name = lovely_name_short
-                things += f"Type contact        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\"]\n"
-                items += f"Contact        {item_name}         \"{lovely_name}\"               <contact>         {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
-                fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
 
             # Arbeit (wh)
             if address['DatapointType'] == 'DPST-13-10':
-                used = True
                 lovely_name = ' '.join(lovely_name.replace('Leistung','').split())
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"13.010:{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f Wh]\"                <batterylevel>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f Wh]\" {visibility}\n"
-        
+
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"13.010:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f Wh]"
+                semantic_info = "[\"Measurement\", \"Energy\"]"
+                item_icon = "batterylevel"
+
             # Leistung (W)
             if address['DatapointType'] == 'DPST-14-56':
-                used = True
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"14.056:{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f Watt]\"          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f Watt]\" {visibility}\n"
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"14.056:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f W]"
+                semantic_info = "[\"Measurement\", \"Power\"]"
+                item_icon = "batterylevel"
 
             # Strom
             if address['DatapointType'] == 'DPST-7-12':
-                used = True
                 lovely_name = ' '.join(lovely_name.replace('Strom','').replace('aktuell','').split())
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"7.012:{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f mA]\"                <batterylevel>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f mA]\" {visibility}\n"
+
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"7.012:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f mA]"
+                semantic_info = "[\"Measurement\", \"Current\"]"
+                item_icon = "batterylevel"
 
             # Lux
             if address['DatapointType'] == 'DPST-9-4':
-                used = True
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"9.004:{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f LUX]\"                <sun>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f Lux]\" {visibility}\n"
-            
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"9.004:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f Lux]"
+                semantic_info = "[\"Measurement\", \"Light\"]"
+                item_icon = "sun"
+
             # Geschwindigkeit m/s
             if address['DatapointType'] == 'DPST-9-5':
-                used = True
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"9.005:{address['Address']}\" ]\n"
-                items += f"Number        {item_name}         \"{lovely_name} [%.1f m/s]\"                <wind>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                group += f"        Default item={item_name} label=\"{lovely_name} [%.1f m/s]\" {visibility}\n"
-
-            # Präsenz
-            if address['DatapointType'] == 'DPST-1-1':
-                if 'Präsenz' in address['Group name']:
-                    used = True
-                    things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
-                    items += f"Switch        {item_name}         \"{lovely_name}\"               <parents_2_3>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
+                auto_add = True
+                item_type = "Number"
+                thing_address_info = f"ga=\"9.005:{address['Address']}\""
+                item_label = f"{lovely_name} [%.1f m/s]"
+                semantic_info = "[\"Measurement\", \"Wind\"]"
+                item_icon = "wind"
 
             # Szene
             if address['DatapointType'] == 'DPST-17-1':
@@ -224,7 +256,7 @@ for floorNr in house.keys():
                 used = True
                 mappings=''
 
-                things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ga=\"17.001:{address['Address']}\"]\n"
+                #things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ga=\"17.001:{address['Address']}\"]\n"
                 
                 if 'mappings' in address['Description']:
                     #TODO: split other values
@@ -232,14 +264,24 @@ for floorNr in house.keys():
                     mappings = address['Description'].replace("'",'"')
                     #TODO: move this
                     
-                    items += f"Number        {item_name}         \"{lovely_name} [MAP({mapfile}):%s]\"               <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    group += f"        Selection item={item_name} label=\"{lovely_name}\"  {mappings} {visibility}\n"
+                    #items += f"Number        {item_name}         \"{lovely_name} [MAP({mapfile}):%s]\"               <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                    #group += f"        Selection item={item_name} label=\"{lovely_name}\"  {mappings} {visibility}\n"
                     mapfile_content = mappings.replace('"','').replace(',','\n').replace('mappings=[','').replace(']','').replace(' ','')
                     mapfile_content += '\n' + mapfile_content.replace('=','.0=') + '\n-=unknown'
                     open(os.path.join(config['transform_dir_path'], mapfile),'w').write(mapfile_content)
-                else:
-                    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    group += f"        Selection item={item_name} label=\"{lovely_name}\"  {visibility}\n"
+
+                    auto_add = True
+                    item_type = "Number"
+                    thing_address_info = f"ga=\"17.001:{address['Address']}\""
+                    item_label = f"{lovely_name} [MAP({mapfile}):%s]"
+                    semantic_info = "[\"Control\"]"
+                    item_icon = "movecontrol"
+                    visibility  = f"{mappings} {visibility}"
+                    sitemap_type = "Selection"
+
+                #else:
+                #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                #    group += f"        Selection item={item_name} label=\"{lovely_name}\"  {visibility}\n"
                 
             # Szenensteuerung
             #if address['DatapointType'] == 'DPST-18-1':
@@ -248,14 +290,27 @@ for floorNr in house.keys():
             #    things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"18.001:{address['Address']}\" ]\n"
             #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <sun>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
 
-            # Nachtmodus
-            if address['DatapointType'] == 'DPST-1-1':
-                if 'Nachtmodus' in address['Group name']:
-                    used = True
-                    things += f"Type switch        : {item_name}        \"{address['Group name']}\"       [ ga=\"{address['Address']}\" ]\n"
-                    items += f"Switch        {item_name}         \"{lovely_name}\"               <moon>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    group += f"        Default item={item_name} label=\"{lovely_name}\" {visibility}\n"
-            
+            if auto_add:
+
+                visibility = ''
+                for description in descriptions:
+                    if 'debug' in description:
+                        visibility = 'visibility=[extended_view==ON]'
+                    if description.startswith('semantic='):
+                        semantic_info = '["' + description.replace('semantic=','').replace(',','","') + '"] '
+                    if description.startswith('icon='):
+                        item_icon = description.replace('icon=','').replace(',','","')
+
+                used = True
+                if item_icon:
+                    item_icon = f"<{item_icon}>"
+                else: 
+                    item_icon = ""
+                thing_type = item_type.lower()
+                things += f"Type {thing_type}    :   {item_name}   \"{address['Group name']}\"   [ {thing_address_info} ]\n"
+                items += f"{item_type}   {item_name}   \"{item_label}\"   {item_icon}   (map{floorNr}_{roomNr})   {semantic_info}    {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                group += f"        {sitemap_type} item={item_name} label=\"{item_label}\" {visibility}\n"
+
             if used:
                 used_addresses.append(address['Address'])
             if 'influx' in address['Description']:
