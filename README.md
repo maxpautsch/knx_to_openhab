@@ -8,6 +8,9 @@ Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperat
 - edit `config.json`
 - run `python3 ets_to_openhab.py`
 
+## drop words
+Within the configuration, there is a field `drop_words`. There you can define words which should not be used in labels. E.g. lights have already a bulb symbold. So the word light is not needed in the description. However, if the description would be empty after cleanup, the words are not dropped! (e.g. you have a `light right` and a `light left` -> bulb symbols with the words `right` and `left`. If you have only one light, the name will not be shortend as it is already short ;) )
+
 ## ETS description field
 
 there are some addons based on the description field of the GA in ETS. Multiple options are seperated by a semicolon. 
