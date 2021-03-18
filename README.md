@@ -6,6 +6,7 @@ Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperat
 
 ## Run
 - edit `config.json`
+    - the default locations for the output files match directly, if you create a `openhab` directory and mount the `/etc/openhab` there. (under linux use e.g. `sshfs pi@[myIP]:/etc/openhab openhab`)
 - run `python3 ets_to_openhab.py`
 
 ## drop words
@@ -24,17 +25,23 @@ there are some addons based on the description field of the GA in ETS. Multiple 
 (e.g. `semantic=Pump;icon=pump;debug;influx`)
 
 ## Processed types:
+### Components determined only by GA
 - Temperature based on Datatype
-- Switch - based on Datatype. Looking for a status GA with the same name and suffix configured in config.json/"switch"/"status_suffix". Default: "Status" 
-    - Example: GAs "Light right" + "Light right Status"
-- Dimmer - based on suffix in config.json/"dimmer"/"suffix_absolut" (default: "Dimmen absolut"). Also searching for: "status_suffix" (default "Status Dimmwert") Dropping all GA suffixes within config.json/"dimmer"/"drop".
-    -  Example: GAs "Light Dimmen absolut" + "Light Status Dimmwert"
-- Window Contact - based on Datatype (DPST-1-19)
+- Window Contact - based on Datatype 1.019
 - Electrical work (wh) based on Datatype    
 - Power (W) based on Datatype
 - Curent based on Datatype
 - Lux based on Datatype
+- Day/Night based on Datatype 1.024
+- Alarm based on Datatype 1.005
 - Speed m/s based on Datatype
-- Timedifference based on Datatype (DPST-13-100)
+- Timedifference based on Datatype 13.100
 - Scene based on Datatype. Add for example `mappings=[63='Aus', 62='Automatik', 1='Kochen', 2='Beamer', 3='Allgemein']` to description in ETS to generate automatic mapping. MAP transformation plugin required!
-- Rollershutter 
+
+### Components which need a naming scheme
+- Rollershutter based on Name
+- Switch - based on Datatype. Looking for a status GA with the same name and suffix configured in config.json/"switch"/"status_suffix". Default: "Status" 
+    - Example: GAs "Light right" + "Light right Status"
+    - Lights, powerplugs and audio devices can be detected by names configured at config.json -> defines -> switch -  "poweroutlet_name" / "speaker_name" / "light_name"
+- Dimmer - based on suffix in config.json/"dimmer"/"suffix_absolut" (default: "Dimmen absolut"). Also searching for: "status_suffix" (default "Status Dimmwert") Dropping all GA suffixes within config.json/"dimmer"/"drop".
+    -  Example: GAs "Light Dimmen absolut" + "Light Status Dimmwert"

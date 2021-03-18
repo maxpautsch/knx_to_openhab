@@ -1,14 +1,21 @@
 {
-    "ets_export": "../ets_gruppenadressen.csv", 
+    "ets_export": "ets_gruppenadressen.csv", 
 
-    "things_path": "../../openhab/things/knx.things",
-    "items_path": "../../openhab/items/knx.items",
-    "sitemaps_path": "../../openhab/sitemaps/knx.sitemap",
-    "influx_path": "../../openhab/persistence/influxdb.persist",
-    "transform_dir_path": "../../openhab/transform",
+    "things_path": "openhab/things/knx.things",
+    "items_path": "openhab/items/knx.items",
+    "sitemaps_path": "openhab/sitemaps/knx.sitemap",
+    "influx_path": "openhab/persistence/influxdb.persist",
+    "transform_dir_path": "openhab/transform",
 
     "defines" : {
-        "switch": {"status_suffix": "Status"},
+
+        
+        "switch":
+            {"status_suffix": "Status",
+             "poweroutlet_name" : "Steckdose",
+             "speaker_name": "Audio",
+             "light_name": "Licht"
+            },
 
         "dimmer": 
             {"absolut_suffix": "Dimmen absolut", 

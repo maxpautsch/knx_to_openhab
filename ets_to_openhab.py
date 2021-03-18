@@ -92,7 +92,6 @@ for floorNr in house.keys():
                 sitemap_type = 'Default'
                 mappings = ''
                 
-                
                 lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['Group name'],'').replace(house[floorNr]['rooms'][roomNr]['Group name'],'').split())
                 item_label = lovely_name
                 descriptions = address['Description'].split(';')
@@ -125,36 +124,72 @@ for floorNr in house.keys():
                         items += f"Dimmer        {item_name}         \"{lovely_name} [%d %%]\"               <light>  (map{floorNr}_{roomNr})    [\"Lightbulb\"]    {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
                         group += f"        Default item={item_name} label=\"{lovely_name} [%d %%]\" {visibility}\n"
 
-                # Schalten, Präsenz, Nachtmodus
+                # rollos / jalousien
+                if address['DatapointType'] == 'DPST-1-8':
+                    if not address['Group name'].endswith(config['defines']['rollershutter']['up_down_suffix']):
+                        continue
+                    
+                    basename = address['Group name'].replace(config['defines']['rollershutter']['up_down_suffix'],'')
+                    fahren_auf_ab = data_of_name(addresses, basename + config['defines']['rollershutter']['up_down_suffix'])
+                    fahren_stop = data_of_name(addresses, basename + config['defines']['rollershutter']['stop_suffix'])
+                    absolute_position = data_of_name(addresses, basename + config['defines']['rollershutter']['absolute_position_suffix'])
+                    absolute_position_status = data_of_name(addresses, basename + config['defines']['rollershutter']['status_suffix'])
+                    #Status Richtung nicht in verwendung durch openhab
+                    for drop_name in config['defines']['rollershutter']['drop']:
+                        drop_addr = data_of_name(addresses, basename + drop_name)
+                        if drop_addr:
+                            used_addresses.append(drop_addr['Address'])
+
+                    lovely_name = basename
+                    
+                    if fahren_auf_ab and fahren_stop and absolute_position and absolute_position_status:
+                        used_addresses.append(fahren_auf_ab['Address'])
+                        used_addresses.append(fahren_stop['Address'])
+                        used_addresses.append(absolute_position['Address'])
+                        used_addresses.append(absolute_position_status['Address'])
+
+                        auto_add = True
+                        item_type = "Rollershutter"
+                        thing_address_info = f"upDown=\"{fahren_auf_ab['Address']}\", stopMove=\"{fahren_stop['Address']}\", position=\"{absolute_position['Address']}+<{absolute_position_status['Address']}\""
+                        item_label = f"{lovely_name} [%d %%]"
+                        semantic_info = "[\"Blinds\"]"
+                        item_icon = "rollershutter"
+                    else:
+                        print(f"incomplete rollershutter: {basename}")
+
+                # Schalten
                 if address['DatapointType'] == 'DPST-1-1':
                     item_type = "Switch"
-                    thing_address_info = f"ga=\"{address['Address']}\""
+                    item_icon = "switch"
                     item_label = lovely_name
-                    if 'Präsenz' in address['Group name']:
-                        auto_add = True
-                        semantic_info = "[\"Measurement\",\"MotionDetector\", \"Presence\"]"
-                        item_icon = "motion" 
-                    if 'Nachtmodus' in address['Group name']:
-                        auto_add = True
-                        semantic_info = "[\"Control\"]"
-                        item_icon = "moon" 
                     # umschalten (Licht, Steckdosen)
+                    # only add in first round, if there is a status GA for feedback
                     if not address['Group name'].endswith(' '+config['defines']['switch']['status_suffix']):
                         status = data_of_name(addresses, address['Group name'] + ' ' + config['defines']['switch']['status_suffix'])
                         if status:
-                            auto_add = True
-                            used_addresses.append(status['Address'])
-                            
-                            semantic_info = "[\"Lightbulb\"]"
-                            item_icon = 'light'
-                            if 'Steckdose' in address['Group name']:
-                                semantic_info = "[\"PowerOutlet\"]"
-                                item_icon = 'poweroutlet'
-                            if 'Audio' in address['Group name']:
-                                semantic_info = "[\"Speaker\"]"
-                                item_icon = 'soundvolume'
+                            if status['DatapointType'] == 'DPST-1-11':
+                                auto_add = True
+                                used_addresses.append(status['Address'])
+                                thing_address_info = f"ga=\"{address['Address']}+{status['Address']}\""
 
-            ######## determined only by datapoint
+                    # in the second run, we accept everything ;)
+                    if run == 1:
+                        auto_add = True
+                        thing_address_info = f"ga=\"1.001:{address['Address']}\""
+                        item_label = f"{lovely_name} [%d]"
+                        semantic_info = "[\"Control\", \"Status\"]"
+
+                    if config['defines']['switch']['light_name'] in address['Group name']:
+                        semantic_info = "[\"Lightbulb\"]"
+                        item_icon = 'light'
+                    if config['defines']['switch']['poweroutlet_name'] in address['Group name']:
+                        semantic_info = "[\"PowerOutlet\"]"
+                        item_icon = 'poweroutlet'
+                    if config['defines']['switch']['speaker_name'] in address['Group name']:
+                        semantic_info = "[\"Speaker\"]"
+                        item_icon = 'soundvolume'
+                ######## determined only by datapoint
+
                 # temperatur
                 if address['DatapointType'] == 'DPST-9-1':
                     auto_add = True
@@ -177,40 +212,6 @@ for floorNr in house.keys():
 
                     fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
 
-                # rollos / jalousien
-                if address['DatapointType'] == 'DPST-1-8':
-                    if not address['Group name'].endswith(config['defines']['rollershutter']['up_down_suffix']):
-                        continue
-                    
-                    basename = address['Group name'].replace(config['defines']['rollershutter']['up_down_suffix'],'')
-                    fahren_auf_ab = data_of_name(addresses, basename + config['defines']['rollershutter']['up_down_suffix'])
-                    fahren_stop = data_of_name(addresses, basename + config['defines']['rollershutter']['stop_suffix'])
-                    absolute_position = data_of_name(addresses, basename + config['defines']['rollershutter']['absolute_position_suffix'])
-                    absolute_position_status = data_of_name(addresses, basename + config['defines']['rollershutter']['status_suffix'])
-                    #Status Richtung nicht in verwendung durch openhab
-                    for drop_name in config['defines']['rollershutter']['drop']:
-                        drop_addr = data_of_name(addresses, basename + drop_name)
-                        if drop_addr:
-                            used_addresses.append(drop_addr['Address'])
-
-                    lovely_name = basename
-                    
-                    if fahren_auf_ab and fahren_stop and absolute_position and absolute_position_status:
-                        used = True
-                        used_addresses.append(fahren_auf_ab['Address'])
-                        used_addresses.append(fahren_stop['Address'])
-                        used_addresses.append(absolute_position['Address'])
-                        used_addresses.append(absolute_position_status['Address'])
-
-                        auto_add = True
-                        item_type = "Rollershutter"
-                        thing_address_info = f"upDown=\"{fahren_auf_ab['Address']}\", stopMove=\"{fahren_stop['Address']}\", position=\"{absolute_position['Address']}+<{absolute_position_status['Address']}\""
-                        item_label = f"{lovely_name} [%d %%]"
-                        semantic_info = "[\"Blinds\"]"
-                        item_icon = "rollershutter"
-                    else:
-                        print(f"incomplete rollershutter: {basename}")
-
                 # Arbeit (wh)
                 if address['DatapointType'] == 'DPST-13-10':
                     auto_add = True
@@ -219,6 +220,24 @@ for floorNr in house.keys():
                     item_label = f"{lovely_name} [%.1f Wh]"
                     semantic_info = "[\"Measurement\", \"Energy\"]"
                     item_icon = "batterylevel"
+
+                # Tag/Nacht
+                if address['DatapointType'] == 'DPST-1-24':
+                    auto_add = True
+                    item_type = "Switch"
+                    thing_address_info = f"ga=\"1.024:{address['Address']}\""
+                    item_label = f"{lovely_name}"
+                    semantic_info = "[\"Control\"]"
+                    item_icon = "moon"
+
+                # Alarm
+                if address['DatapointType'] == 'DPST-1-5':
+                    auto_add = True
+                    item_type = "Switch"
+                    thing_address_info = f"ga=\"1.005:{address['Address']}\""
+                    item_label = f"{lovely_name}"
+                    semantic_info = "[\"Alarm\"]"
+                    item_icon = "alarm"
 
                 # Leistung (W)
                 if address['DatapointType'] == 'DPST-14-56':
@@ -310,15 +329,6 @@ for floorNr in house.keys():
                         auto_add = True
                         item_type = "Switch"
                         thing_address_info = f"ga=\"1.011:{address['Address']}\""
-                        item_label = f"{lovely_name} [%d]"
-                        semantic_info = "[\"Measurement\", \"Status\"]"
-                        item_icon = "switch"
-
-                    # Status
-                    if address['DatapointType'] == 'DPST-1-1':
-                        auto_add = True
-                        item_type = "Switch"
-                        thing_address_info = f"ga=\"1.001:{address['Address']}\""
                         item_label = f"{lovely_name} [%d]"
                         semantic_info = "[\"Measurement\", \"Status\"]"
                         item_icon = "switch"
