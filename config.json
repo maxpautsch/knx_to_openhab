@@ -8,15 +8,12 @@
     "transform_dir_path": "openhab/transform",
 
     "defines" : {
-
-        
         "switch":
             {"status_suffix": "Status",
              "poweroutlet_name" : "Steckdose",
              "speaker_name": "Audio",
              "light_name": "Licht"
             },
-
         "dimmer": 
             {"absolut_suffix": "Dimmen absolut", 
              "status_suffix": "Status Dimmwert",
@@ -29,7 +26,6 @@
              "status_suffix": "Status",
              "drop": ["Status Richtung"]
              },
-
         "drop_words": ["Fensterkontakt", "Licht" , "Steckdose", "Steckdosen", "Strom", "Leistung"]
     }
 }

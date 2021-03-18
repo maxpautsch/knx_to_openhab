@@ -1,5 +1,6 @@
-# knx_to_openhab
-Generate openhab configuration (semantic model as also sitemap for basicui) based on ETS export
+# KNX to openhab generator
+Generate an openhab text configuration based on an ETS GA export. 
+Despite all things and items, the sitemap for basicui is generated. The semantic model is supported. 
 
 ## Export GAs:
 Select all GAs in ETS. Exportformat: CSV. Format 1/1 "Name/Adresse", SCV Seperator Tabulator. The GAs should follow the scheme floor/room/message.
@@ -42,6 +43,6 @@ there are some addons based on the description field of the GA in ETS. Multiple 
 - Rollershutter based on Name
 - Switch - based on Datatype. Looking for a status GA with the same name and suffix configured in config.json/"switch"/"status_suffix". Default: "Status" 
     - Example: GAs "Light right" + "Light right Status"
-    - Lights, powerplugs and audio devices can be detected by names configured at config.json -> defines -> switch -  "poweroutlet_name" / "speaker_name" / "light_name"
+    - Lights, powerplugs and audio devices can be detected by names configured at config.json -> defines -> switch -  "poweroutlet_name" / "speaker_name" / "light_name". The configured name has to be part of the GA Name.
 - Dimmer - based on suffix in config.json/"dimmer"/"suffix_absolut" (default: "Dimmen absolut"). Also searching for: "status_suffix" (default "Status Dimmwert") Dropping all GA suffixes within config.json/"dimmer"/"drop".
     -  Example: GAs "Light Dimmen absolut" + "Light Status Dimmwert"
