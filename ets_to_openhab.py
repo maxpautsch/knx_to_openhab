@@ -45,30 +45,43 @@ cnt = 0
 for floorNr in house.keys():
     descriptions = house[floorNr]['Description'].split(';')
     visibility = ''
-    location = ''
+    semantic = ''
+    synonyms = ''
+    icon = ''
     for description in descriptions:
         if description == 'debug':
             visibility = 'visibility=[extended_view==ON]'
-        if description.startswith('location='):
-            location = '["' + description.replace('location=','').replace(',','","') + '"] '
+        if description.startswith('icon='):
+            icon = '<' + description.replace('icon=','') + '>'
+        if description.startswith('semantic='):
+            semantic = '["' + description.replace('semantic=','').replace(',','","') + '"] '
+        if description.startswith('synonyms='):
+           synonyms = '{ ' + description.replace('synonyms=','synonyms="').replace(',',', ') + '" } '
 
-    items += f"Group   map{floorNr}   \"{house[floorNr]['Group name']}\"   (Home)  [\"Location\"] \n" # {location}  \n" # {visibility}
+    items += f"Group   map{floorNr}   \"{house[floorNr]['Group name']}\" {icon}  {semantic} {synonyms} \n" # {location}  \n" # {visibility}
     sitemap += f"Frame label=\"{house[floorNr]['Group name']}\" {{\n"
 
     for roomNr in house[floorNr]['rooms'].keys():
         roomName = house[floorNr]['rooms'][roomNr]['Group name']
         descriptions = house[floorNr]['rooms'][roomNr]['Description'].split(';')
         visibility = ''
-        location = ''
+        semantic = f"[\"Room\", \"{roomName}\"]"
+        icon = ''
+        synonyms = ''
         for description in descriptions:
             if description == 'debug':
                 visibility = 'visibility=[extended_view==ON]'
-            if description.startswith('location='):
-                location = '["' + description.replace('location=','').replace(',','","') + '"] '
-        
+            if description.startswith('icon='):
+                icon = '<' + description.replace('icon=','') + '>'
+            if description.startswith('semantic='):
+                semantic = '["' + description.replace('semantic=','').replace(',','","') + '"] '
+            if description.startswith('synonyms='):
+                synonyms = '{ ' + description.replace('synonyms=','synonyms="').replace(',',', ') + '" } '
+            if description.startswith('name='):
+                roomName = description.replace('name=','')
 
-        items += f"Group   map{floorNr}_{roomNr}   \"{roomName}\"   (map{floorNr})   {location}\n"
-        sitemap += f"     Group item=map{floorNr}_{roomNr} {visibility} label=\"{roomName} \" "
+        items += f"Group   map{floorNr}_{roomNr}   \"{roomName}\"  {icon}  (map{floorNr})   {semantic} {synonyms}\n"
+        sitemap += f"     Group item=map{floorNr}_{roomNr} {visibility} label=\"{roomName}\" "
         group = ""
 
         addresses = house[floorNr]['rooms'][roomNr]['Addresses']
@@ -91,10 +104,10 @@ for floorNr in house.keys():
                 item_icon = None
                 sitemap_type = 'Default'
                 mappings = ''
-                
-                lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['Group name'],'').replace(house[floorNr]['rooms'][roomNr]['Group name'],'').split())
+                lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['rooms'][roomNr]['Group name'],'').replace(house[floorNr]['Group name'],'').split())
                 item_label = lovely_name
                 descriptions = address['Description'].split(';')
+                equipment = ''
 
                 #print(f"--- processing: {lovely_name}")
                 #print(address)
@@ -111,18 +124,35 @@ for floorNr in house.keys():
                     dimmwert_status = data_of_name(addresses, basename + config['defines']['dimmer']['status_suffix'])
                     if dimmwert_status:
                         used = True
+                        switch_option = ''
+                        relative_option = ''
                         used_addresses.append(dimmwert_status['Address'])
-                        # drop possible unused GAs
-                        for drop_name in config['defines']['dimmer']['drop']:
-                            drop_addr = data_of_name(addresses, basename + drop_name)
-                            if drop_addr:
-                                used_addresses.append(drop_addr['Address'])
 
+                        relative_command = data_of_name(addresses, basename + config['defines']['dimmer']['relativ_suffix'])
+
+                        if relative_command:
+                            used_addresses.append(relative_command['Address'])
+                            relative_option = f", increaseDecrease=\"{relative_command['Address']}\""
+
+                        switch_command = data_of_name(addresses, basename + config['defines']['dimmer']['switch_suffix'])
+                        if switch_command:
+                            used_addresses.append(switch_command['Address'])
+                            switch_status_command = data_of_name(addresses, basename + config['defines']['dimmer']['switch_status_suffix'])
+                            switch_option_status = ''
+                            if switch_status_command:
+                                used_addresses.append(switch_status_command['Address'])
+                                switch_option_status = f"+<{switch_status_command['Address']}"
+                            switch_option = f", switch=\"{switch_command['Address']}{switch_option_status}\""
+                        
                         lovely_name = ' '.join(lovely_name.replace('Dimmen','').replace('Dimmer','').replace('absolut','').replace('Licht','').split())
-                        things += f"Type dimmer        : {item_name}        \"{address['Group name'].replace('absolut','')}\"        "
-                        things += f"[ position=\"{address['Address']}+<{dimmwert_status['Address']}\"]\n"
-                        items += f"Dimmer        {item_name}         \"{lovely_name} [%d %%]\"               <light>  (map{floorNr}_{roomNr})    [\"Lightbulb\"]    {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                        group += f"        Default item={item_name} label=\"{lovely_name} [%d %%]\" {visibility}\n"
+
+                        auto_add = True
+                        item_type = "Dimmer"
+                        item_label = f"{lovely_name} [%d %%]"
+                        thing_address_info = f"position=\"{address['Address']}+<{dimmwert_status['Address']}\"{switch_option}{relative_option}"
+                        item_icon = "light"
+                        equipment = 'Lightbulb'
+                        semantic_info = "[\"Light\"]"
 
                 # rollos / jalousien
                 if address['DatapointType'] == 'DPST-1-8':
@@ -167,7 +197,7 @@ for floorNr in house.keys():
                     if not address['Group name'].endswith(' '+config['defines']['switch']['status_suffix']):
                         status = data_of_name(addresses, address['Group name'] + ' ' + config['defines']['switch']['status_suffix'])
                         if status:
-                            if status['DatapointType'] == 'DPST-1-11':
+                            #if status['DatapointType'] == 'DPST-1-11':
                                 auto_add = True
                                 used_addresses.append(status['Address'])
                                 thing_address_info = f"ga=\"{address['Address']}+{status['Address']}\""
@@ -180,14 +210,19 @@ for floorNr in house.keys():
                         semantic_info = "[\"Control\", \"Status\"]"
 
                     if config['defines']['switch']['light_name'] in address['Group name']:
-                        semantic_info = "[\"Lightbulb\"]"
+                        semantic_info = "[\"Light\"]"
+                        equipment = 'Lightbulb'
                         item_icon = 'light'
                     if config['defines']['switch']['poweroutlet_name'] in address['Group name']:
-                        semantic_info = "[\"PowerOutlet\"]"
+                        semantic_info = "[\"Switch\"]"
+                        equipment = 'PowerOutlet'
                         item_icon = 'poweroutlet'
                     if config['defines']['switch']['speaker_name'] in address['Group name']:
-                        semantic_info = "[\"Speaker\"]"
+                        semantic_info = "[\"Switch\"]"
+                        equipment = 'Speaker'
                         item_icon = 'soundvolume'
+
+
                 ######## determined only by datapoint
 
                 # temperatur
@@ -208,7 +243,8 @@ for floorNr in house.keys():
                     auto_add = True
                     item_type = "Contact"
                     thing_address_info = f"ga=\"1.019:{address['Address']}\""
-                    semantic_info = "[\"Window\", \"OpenState\"]"
+                    equipment = 'Window'
+                    semantic_info = "[\"Status\", \"Opening\"]"
 
                     fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
 
@@ -305,7 +341,7 @@ for floorNr in house.keys():
                         item_type = "Number"
                         thing_address_info = f"ga=\"17.001:{address['Address']}\""
                         item_label = f"{lovely_name} [MAP({mapfile}):%s]"
-                        semantic_info = "[\"Lightbulb\"]"
+                        semantic_info = "[\"Control\"]"
                         item_icon = "movecontrol"
                         sitemap_type = "Selection"
                     else:
@@ -338,6 +374,7 @@ for floorNr in house.keys():
                     used_addresses.append(address['Address'])
 
                 if auto_add:
+                    synonyms = ''
                     used_addresses.append(address['Address'])
                     visibility = ''
                     for description in descriptions:
@@ -347,7 +384,10 @@ for floorNr in house.keys():
                             semantic_info = '["' + description.replace('semantic=','').replace(',','","') + '"] '
                         if description.startswith('icon='):
                             item_icon = description.replace('icon=','').replace(',','","')
-
+                        if description.startswith('synonyms='):
+                            synonyms = '{ ' + description.replace('synonyms=','synonyms="').replace(',',', ') + '" } '
+                        if description.startswith('name='):
+                            item_label = description.replace('name=','')
                     # remove generic description if unneccessary
                     item_label_short = item_label
                     for drop in config['defines']['drop_words']:
@@ -360,9 +400,16 @@ for floorNr in house.keys():
                         item_icon = f"<{item_icon}>"
                     else: 
                         item_icon = ""
+
                     thing_type = item_type.lower()
                     things += f"Type {thing_type}    :   {item_name}   \"{address['Group name']}\"   [ {thing_address_info} ]\n"
-                    items += f"{item_type}   {item_name}   \"{item_label}\"   {item_icon}   (map{floorNr}_{roomNr})   {semantic_info}    {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+
+                    root = f"map{floorNr}_{roomNr}"
+                    if equipment != '':
+                        items += f"Group   equipment_{item_name}   \"{item_label}\"  {item_icon}  ({root})   [\"{equipment}\"]\n"
+                        root = f"equipment_{item_name}"
+
+                    items += f"{item_type}   {item_name}   \"{item_label}\"   {item_icon}   ({root})   {semantic_info}    {{ channel=\"knx:device:bridge:generic:{item_name}\" {synonyms} }}\n"
                     group += f"        {sitemap_type} item={item_name} label=\"{item_label}\" {mappings} {visibility}\n"
 
                     if 'influx' in address['Description']:

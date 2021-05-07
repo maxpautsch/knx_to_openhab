@@ -17,7 +17,9 @@
         "dimmer": 
             {"absolut_suffix": "Dimmen absolut", 
              "status_suffix": "Status Dimmwert",
-             "drop": ["Schalten", "Dimmen relativ", "Status Ein/Aus"]
+             "switch_suffix": "Schalten",
+             "switch_status_suffix": "Status Ein/Aus",
+             "relativ_suffix": "Dimmen relativ"
             },
         "rollershutter":
             {"up_down_suffix": "Auf/Ab", 
