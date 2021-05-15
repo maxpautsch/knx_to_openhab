@@ -293,6 +293,13 @@ for floorNr in house.keys():
                     semantic_info = "[\"Measurement\", \"Current\"]"
                     item_icon = "energy"
 
+                # String
+                if address['DatapointType'] == 'DPST-16-0':
+                    auto_add = True
+                    item_type = "String"
+                    thing_address_info = f"ga=\"16.000:{address['Address']}\""
+                    item_icon = "text"
+
                 # Lux
                 if address['DatapointType'] == 'DPST-9-4':
                     auto_add = True
