@@ -225,7 +225,7 @@ for floorNr in house.keys():
 
                 ######## determined only by datapoint
 
-                # temperatur
+                # temperature
                 if address['DatapointType'] == 'DPST-9-1':
                     auto_add = True
                     item_type = "Number"
@@ -237,6 +237,19 @@ for floorNr in house.keys():
                         semantic_info = "[\"Setpoint\", \"Temperature\"]"
                     
                     item_icon = "temperature" 
+
+                # humidity
+                if address['DatapointType'] == 'DPST-9-7':
+                    auto_add = True
+                    item_type = "Number"
+                    thing_address_info = f"ga=\"9.007:{address['Address']}\""
+                    item_label = f"{lovely_name} [%.1f %%RHD]"
+
+                    semantic_info = "[\"Measurement\", \"Humidity\"]"
+                    if 'Soll' in lovely_name:
+                        semantic_info = "[\"Setpoint\", \"Humidity\"]"
+                    
+                    item_icon = "humidity" 
 
                 # window/door
                 if address['DatapointType'] == 'DPST-1-19':
