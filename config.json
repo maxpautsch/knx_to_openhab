@@ -12,7 +12,8 @@
             {"status_suffix": "Status",
              "poweroutlet_name" : "Steckdose",
              "speaker_name": "Audio",
-             "light_name": "Licht"
+             "light_name": "Licht",
+             "heating_name": "Heizen"
             },
         "dimmer": 
             {"absolut_suffix": "Dimmen absolut", 
@@ -28,6 +29,6 @@
              "status_suffix": "Status",
              "drop": ["Status Richtung"]
              },
-        "drop_words": ["Fensterkontakt", "Licht" , "Steckdose", "Steckdosen", "Strom", "Leistung"]
+        "drop_words": ["Fensterkontakt", "Licht", "Steckdose", "Steckdosen", "Strom", "Leistung"]
     }
 }

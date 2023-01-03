@@ -45,7 +45,7 @@ cnt = 0
 for floorNr in house.keys():
     descriptions = house[floorNr]['Description'].split(';')
     visibility = ''
-    semantic = ''
+    semantic = '["Location"]'
     synonyms = ''
     icon = ''
     for description in descriptions:
@@ -54,7 +54,7 @@ for floorNr in house.keys():
         if description.startswith('icon='):
             icon = '<' + description.replace('icon=','') + '>'
         if description.startswith('semantic='):
-            semantic = '["' + description.replace('semantic=','').replace(',','","') + '"] '
+            semantic = '["Location", "' + description.replace('semantic=','').replace(',','","') + '"] '
         if description.startswith('synonyms='):
            synonyms = '{ ' + description.replace('synonyms=','synonyms="').replace(',',', ') + '" } '
 
@@ -63,9 +63,10 @@ for floorNr in house.keys():
 
     for roomNr in house[floorNr]['rooms'].keys():
         roomName = house[floorNr]['rooms'][roomNr]['Group name']
+        roomNameOrig = roomName
         descriptions = house[floorNr]['rooms'][roomNr]['Description'].split(';')
         visibility = ''
-        semantic = f"[\"Room\", \"{roomName}\"]"
+        semantic = f"[\"Location\", \"Room\", \"{roomName}\"]"
         icon = ''
         synonyms = ''
         for description in descriptions:
@@ -74,7 +75,7 @@ for floorNr in house.keys():
             if description.startswith('icon='):
                 icon = '<' + description.replace('icon=','') + '>'
             if description.startswith('semantic='):
-                semantic = '["' + description.replace('semantic=','').replace(',','","') + '"] '
+                semantic = '["Location", "' + description.replace('semantic=','').replace(',','","') + '"] '
             if description.startswith('synonyms='):
                 synonyms = '{ ' + description.replace('synonyms=','synonyms="').replace(',',', ') + '" } '
             if description.startswith('name='):
@@ -104,7 +105,8 @@ for floorNr in house.keys():
                 item_icon = None
                 sitemap_type = 'Default'
                 mappings = ''
-                lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['rooms'][roomNr]['Group name'],'').replace(house[floorNr]['Group name'],'').split())
+                #lovely_name = ' '.join(address['Group name'].replace(house[floorNr]['rooms'][roomNr]['Group name'],'').replace(house[floorNr]['Group name'],'').split())
+                lovely_name = address['Group name']
                 item_label = lovely_name
                 descriptions = address['Description'].split(';')
                 equipment = ''
@@ -115,7 +117,8 @@ for floorNr in house.keys():
                 if 'IGNORE' in address.keys():
                     continue
 
-                item_name = f"i_{cnt}_{house[floorNr]['Group name']}_{house[floorNr]['rooms'][roomNr]['Group name']}_{lovely_name}".replace('/','_').replace(' ','_')
+                shortened_name = ' '.join(address['Group name'].replace(house[floorNr]['rooms'][roomNr]['Group name'],'').replace(house[floorNr]['Group name'],'').split())
+                item_name = f"i_{cnt}_{house[floorNr]['Group name']}_{house[floorNr]['rooms'][roomNr]['Group name']}_{shortened_name}".replace('/','_').replace(' ','_')
                 item_name = item_name.replace('ü','ue').replace('ä','ae').replace('ß','ss')
                 
                 # dimmer
@@ -187,8 +190,8 @@ for floorNr in house.keys():
                     else:
                         print(f"incomplete rollershutter: {basename}")
 
-                # Schalten
-                if address['DatapointType'] == 'DPST-1-1':
+                # Schalten or bool
+                if address['DatapointType'] == 'DPST-1-1' or address['DatapointType'] == 'DPST-1-2':
                     item_type = "Switch"
                     item_icon = "switch"
                     item_label = lovely_name
@@ -206,22 +209,25 @@ for floorNr in house.keys():
                     if run == 1:
                         auto_add = True
                         thing_address_info = f"ga=\"1.001:{address['Address']}\""
-                        item_label = f"{lovely_name} [%d]"
+                        #item_label = f"{lovely_name} [%d]"
                         semantic_info = "[\"Control\", \"Status\"]"
 
                     if config['defines']['switch']['light_name'] in address['Group name']:
-                        semantic_info = "[\"Light\"]"
+                        semantic_info = "[\"Control\", \"Light\"]"
                         equipment = 'Lightbulb'
                         item_icon = 'light'
                     if config['defines']['switch']['poweroutlet_name'] in address['Group name']:
-                        semantic_info = "[\"Switch\"]"
+                        semantic_info = "[\"Control\", \"Switch\"]"
                         equipment = 'PowerOutlet'
                         item_icon = 'poweroutlet'
                     if config['defines']['switch']['speaker_name'] in address['Group name']:
-                        semantic_info = "[\"Switch\"]"
+                        semantic_info = "[\"Control\", \"Switch\"]"
                         equipment = 'Speaker'
                         item_icon = 'soundvolume'
-
+                    if config['defines']['switch']['heating_name'] in address['Group name']:
+                        semantic_info = "[\"Heating\", \"Switch\"]"
+                        equipment = 'HVAC'
+                        item_icon = 'radiator'
 
                 ######## determined only by datapoint
 
@@ -242,8 +248,8 @@ for floorNr in house.keys():
                 if address['DatapointType'] == 'DPST-9-7':
                     auto_add = True
                     item_type = "Number"
-                    thing_address_info = f"ga=\"9.007:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f %%RHD]"
+                    thing_address_info = f"ga=\"9.001:{address['Address']}\""
+                    item_label = f"{lovely_name} [%.1f %%]"
 
                     semantic_info = "[\"Measurement\", \"Humidity\"]"
                     if 'Soll' in lovely_name:
@@ -257,8 +263,8 @@ for floorNr in house.keys():
                     item_type = "Contact"
                     thing_address_info = f"ga=\"1.019:{address['Address']}\""
                     equipment = 'Window'
-                    semantic_info = "[\"Status\", \"Opening\"]"
-
+                    semantic_info = "[\"OpenState\", \"Opening\"]"
+                    
                     fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
 
                 # Arbeit (wh)
@@ -306,6 +312,15 @@ for floorNr in house.keys():
                     semantic_info = "[\"Measurement\", \"Current\"]"
                     item_icon = "energy"
 
+                # Volumen (l)
+                if address['DatapointType'] == 'DPST-12-1200':
+                    auto_add = True
+                    item_type = "Number"
+                    thing_address_info = f"ga=\"12.1200:{address['Address']}\""
+                    item_label = f"{lovely_name} [%.0f l]"
+                    semantic_info = "[\"Measurement\", \"Volume\"]"
+                    item_icon = "water"
+
                 # String
                 if address['DatapointType'] == 'DPST-16-0':
                     auto_add = True
@@ -330,6 +345,23 @@ for floorNr in house.keys():
                     item_label = f"{lovely_name} [%.1f m/s]"
                     semantic_info = "[\"Measurement\", \"Wind\"]"
                     item_icon = "wind"
+
+                # ppm
+                if address['DatapointType'] == 'DPST-9-8':
+                    auto_add = True
+                    item_type = "Number"
+                    thing_address_info = f"ga=\"9.008:{address['Address']}\""
+                    item_label = f"{lovely_name} [%.1f ppm]"
+                    semantic_info = "[\"Measurement\"]"
+
+                # percent
+                if address['DatapointType'] == 'DPST-5-1':
+                    auto_add = True
+                    item_type = "Dimmer"
+                    thing_address_info = f"ga=\"5.001:{address['Address']}\""
+                    item_label = f"{lovely_name} [%d %%]"
+                    semantic_info = "[\"Measurement\"]"
+
 
                 # Zeitdifferenz 
                 if address['DatapointType'] == 'DPST-13-100':
@@ -385,7 +417,7 @@ for floorNr in house.keys():
                         auto_add = True
                         item_type = "Switch"
                         thing_address_info = f"ga=\"1.011:{address['Address']}\""
-                        item_label = f"{lovely_name} [%d]"
+                        item_label = f"{lovely_name}" # [%d]
                         semantic_info = "[\"Measurement\", \"Status\"]"
                         item_icon = "switch"
 
@@ -420,6 +452,8 @@ for floorNr in house.keys():
                         item_icon = f"<{item_icon}>"
                     else: 
                         item_icon = ""
+
+                    item_label = item_label.replace(roomNameOrig, roomName)
 
                     thing_type = item_type.lower()
                     things += f"Type {thing_type}    :   {item_name}   \"{address['Group name']}\"   [ {thing_address_info} ]\n"
@@ -502,29 +536,29 @@ persist += private_persistence + '\n}'
 open(config['influx_path'],'w').write(persist)
 
 
-#print(fensterkontakte)
-#fenster_rule = ''
-#for i in fensterkontakte:
-#    fenster_rule += f'var save_fk_count_{i["item_name"]} = 0 \n'
-#fenster_rule += '''
-#rule "fensterkontakt check"
-#when
-#    Time cron "0 * * * * ? *"
-#then
-#'''
-#for i in fensterkontakte:
-#    fenster_rule += f'    if({i["item_name"]}.state == OPEN){{ \n'
-#    fenster_rule += f'         save_fk_count_{i["item_name"]} += 1\n'
-#    fenster_rule += f'         if(save_fk_count_{i["item_name"]} == 15) {{\n'
-#    fenster_rule +=  '             val telegramAction = getActions("telegram","telegram:telegramBot:Telegram_Bot"); \n'
-#    fenster_rule += f'             telegramAction.sendTelegram("{i["name"]} seit über 15 Minuten offen!");\n'
-#    fenster_rule +=  '         }\n'
-#    fenster_rule +=  '    } else { \n'
-#    fenster_rule += f'        save_fk_count_{i["item_name"]} = 0; \n'
-#    fenster_rule +=  '    } \n'
-#fenster_rule += '''
-#end
-#'''
-#
-#open('../../openhab/rules/fenster.rules','w').write(fenster_rule)
+print(fensterkontakte)
+fenster_rule = ''
+for i in fensterkontakte:
+    fenster_rule += f'var save_fk_count_{i["item_name"]} = 0 \n'
+fenster_rule += '''
+rule "fensterkontakt check"
+when
+    Time cron "0 * * * * ? *"
+then
+'''
+for i in fensterkontakte:
+    fenster_rule += f'    if({i["item_name"]}.state == OPEN){{ \n'
+    fenster_rule += f'         save_fk_count_{i["item_name"]} += 1\n'
+    fenster_rule += f'         if(save_fk_count_{i["item_name"]} == 15) {{\n'
+    fenster_rule +=  '             val telegramAction = getActions("telegram","telegram:telegramBot:Telegram_Bot"); \n'
+    fenster_rule += f'             telegramAction.sendTelegram("{i["name"]} seit über 15 Minuten offen!");\n'
+    fenster_rule +=  '         }\n'
+    fenster_rule +=  '    } else { \n'
+    fenster_rule += f'        save_fk_count_{i["item_name"]} = 0; \n'
+    fenster_rule +=  '    } \n'
+fenster_rule += '''
+end
+'''
+
+open('openhab/rules/fenster.rules','w').write(fenster_rule)
 
