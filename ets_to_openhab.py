@@ -230,188 +230,187 @@ for floorNr in house.keys():
                         item_icon = 'radiator'
 
                 ######## determined only by datapoint
-
-                # temperature
-                if address['DatapointType'] == 'DPST-9-1':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"9.001:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f °C]"
-
-                    semantic_info = "[\"Measurement\", \"Temperature\"]"
-                    if 'Soll' in lovely_name:
-                        semantic_info = "[\"Setpoint\", \"Temperature\"]"
-                    
-                    item_icon = "temperature" 
-
-                # humidity
-                if address['DatapointType'] == 'DPST-9-7':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"9.001:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f %%]"
-
-                    semantic_info = "[\"Measurement\", \"Humidity\"]"
-                    if 'Soll' in lovely_name:
-                        semantic_info = "[\"Setpoint\", \"Humidity\"]"
-                    
-                    item_icon = "humidity" 
-
-                # window/door
-                if address['DatapointType'] == 'DPST-1-19':
-                    auto_add = True
-                    item_type = "Contact"
-                    thing_address_info = f"ga=\"1.019:{address['Address']}\""
-                    equipment = 'Window'
-                    semantic_info = "[\"OpenState\", \"Opening\"]"
-                    
-                    fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
-
-                # Arbeit (wh)
-                if address['DatapointType'] == 'DPST-13-10':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"13.010:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f Wh]"
-                    semantic_info = "[\"Measurement\", \"Energy\"]"
-                    item_icon = "batterylevel"
-
-                # Tag/Nacht
-                if address['DatapointType'] == 'DPST-1-24':
-                    auto_add = True
-                    item_type = "Switch"
-                    thing_address_info = f"ga=\"1.024:{address['Address']}\""
-                    item_label = f"{lovely_name}"
-                    semantic_info = "[\"Control\"]"
-                    item_icon = "moon"
-
-                # Alarm
-                if address['DatapointType'] == 'DPST-1-5':
-                    auto_add = True
-                    item_type = "Switch"
-                    thing_address_info = f"ga=\"1.005:{address['Address']}\""
-                    item_label = f"{lovely_name}"
-                    semantic_info = "[\"Alarm\"]"
-                    item_icon = "alarm"
-
-                # Leistung (W)
-                if address['DatapointType'] == 'DPST-14-56':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"14.056:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f W]"
-                    semantic_info = "[\"Measurement\", \"Power\"]"
-                    item_icon = "energy"
-
-                # Strom
-                if address['DatapointType'] == 'DPST-7-12':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"7.012:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f mA]"
-                    semantic_info = "[\"Measurement\", \"Current\"]"
-                    item_icon = "energy"
-
-                # Volumen (l)
-                if address['DatapointType'] == 'DPST-12-1200':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"12.1200:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.0f l]"
-                    semantic_info = "[\"Measurement\", \"Volume\"]"
-                    item_icon = "water"
-
-                # String
-                if address['DatapointType'] == 'DPST-16-0':
-                    auto_add = True
-                    item_type = "String"
-                    thing_address_info = f"ga=\"16.000:{address['Address']}\""
-                    item_icon = "text"
-
-                # Lux
-                if address['DatapointType'] == 'DPST-9-4':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"9.004:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f Lux]"
-                    semantic_info = "[\"Measurement\", \"Light\"]"
-                    item_icon = "sun"
-
-                # Geschwindigkeit m/s
-                if address['DatapointType'] == 'DPST-9-5':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"9.005:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f m/s]"
-                    semantic_info = "[\"Measurement\", \"Wind\"]"
-                    item_icon = "wind"
-
-                # ppm
-                if address['DatapointType'] == 'DPST-9-8':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"9.008:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f ppm]"
-                    semantic_info = "[\"Measurement\"]"
-
-                # percent
-                if address['DatapointType'] == 'DPST-5-1':
-                    auto_add = True
-                    item_type = "Dimmer"
-                    thing_address_info = f"ga=\"5.001:{address['Address']}\""
-                    item_label = f"{lovely_name} [%d %%]"
-                    semantic_info = "[\"Measurement\"]"
-
-
-                # Zeitdifferenz 
-                if address['DatapointType'] == 'DPST-13-100':
-                    auto_add = True
-                    item_type = "Number"
-                    thing_address_info = f"ga=\"13.100:{address['Address']}\""
-                    item_label = f"{lovely_name} [%.1f s]"
-                    semantic_info = "[\"Measurement\", \"Duration\"]"
-                    item_icon = "time"
-
-                # Szene
-                if address['DatapointType'] == 'DPST-17-1':
-                    used = True
-                    
-                    for description in descriptions:
-                        if description.startswith('mappings='):
-                            mappings = description
-                            break
-
-                    if mappings!= '':
-                        mapfile = f"gen_{item_name}.map"
-                        mappings = mappings.replace("'",'"')
-
-                        mapfile_content = mappings.replace('"','').replace(',','\n').replace('mappings=[','').replace(']','').replace(' ','')
-                        mapfile_content += '\n' + mapfile_content.replace('=','.0=') + '\n-=unknown'
-                        open(os.path.join(config['transform_dir_path'], mapfile),'w').write(mapfile_content)
-
-                        auto_add = True
-                        item_type = "Number"
-                        thing_address_info = f"ga=\"17.001:{address['Address']}\""
-                        item_label = f"{lovely_name} [MAP({mapfile}):%s]"
-                        semantic_info = "[\"Control\"]"
-                        item_icon = "movecontrol"
-                        sitemap_type = "Selection"
-                    else:
-                        print(f"no mapping for scene {address['Address']} {address['Group name']} ")
-                    #else:
-                    #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-                    #    group += f"        Selection item={item_name} label=\"{lovely_name}\"  {visibility}\n"
-                    
-                # Szenensteuerung
-                #if address['DatapointType'] == 'DPST-18-1':
-                #    print(address)
-                #    used = True
-                #    things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"18.001:{address['Address']}\" ]\n"
-                #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <sun>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
-
-                # some components are only processed in the second run
+                # do this only after items with multiple addresses are processed:
                 # e.g. the state datapoint could be an own thing or the feedback from a switch or so
                 if run == 1:
+                    # temperature
+                    if address['DatapointType'] == 'DPST-9-1':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"9.001:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f °C]"
+
+                        semantic_info = "[\"Measurement\", \"Temperature\"]"
+                        if 'Soll' in lovely_name:
+                            semantic_info = "[\"Setpoint\", \"Temperature\"]"
+                        
+                        item_icon = "temperature" 
+
+                    # humidity
+                    if address['DatapointType'] == 'DPST-9-7':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"9.001:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f %%]"
+
+                        semantic_info = "[\"Measurement\", \"Humidity\"]"
+                        if 'Soll' in lovely_name:
+                            semantic_info = "[\"Setpoint\", \"Humidity\"]"
+                        
+                        item_icon = "humidity" 
+
+                    # window/door
+                    if address['DatapointType'] == 'DPST-1-19':
+                        auto_add = True
+                        item_type = "Contact"
+                        thing_address_info = f"ga=\"1.019:{address['Address']}\""
+                        equipment = 'Window'
+                        semantic_info = "[\"OpenState\", \"Opening\"]"
+                        
+                        fensterkontakte.append({'item_name': item_name, 'name': address['Group name']})
+
+                    # Arbeit (wh)
+                    if address['DatapointType'] == 'DPST-13-10':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"13.010:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f Wh]"
+                        semantic_info = "[\"Measurement\", \"Energy\"]"
+                        item_icon = "batterylevel"
+
+                    # Tag/Nacht
+                    if address['DatapointType'] == 'DPST-1-24':
+                        auto_add = True
+                        item_type = "Switch"
+                        thing_address_info = f"ga=\"1.024:{address['Address']}\""
+                        item_label = f"{lovely_name}"
+                        semantic_info = "[\"Control\"]"
+                        item_icon = "moon"
+
+                    # Alarm
+                    if address['DatapointType'] == 'DPST-1-5':
+                        auto_add = True
+                        item_type = "Switch"
+                        thing_address_info = f"ga=\"1.005:{address['Address']}\""
+                        item_label = f"{lovely_name}"
+                        semantic_info = "[\"Alarm\"]"
+                        item_icon = "alarm"
+
+                    # Leistung (W)
+                    if address['DatapointType'] == 'DPST-14-56':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"14.056:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f W]"
+                        semantic_info = "[\"Measurement\", \"Power\"]"
+                        item_icon = "energy"
+
+                    # Strom
+                    if address['DatapointType'] == 'DPST-7-12':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"7.012:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f mA]"
+                        semantic_info = "[\"Measurement\", \"Current\"]"
+                        item_icon = "energy"
+
+                    # Volumen (l)
+                    if address['DatapointType'] == 'DPST-12-1200':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"12.1200:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.0f l]"
+                        semantic_info = "[\"Measurement\", \"Volume\"]"
+                        item_icon = "water"
+
+                    # String
+                    if address['DatapointType'] == 'DPST-16-0':
+                        auto_add = True
+                        item_type = "String"
+                        thing_address_info = f"ga=\"16.000:{address['Address']}\""
+                        item_icon = "text"
+
+                    # Lux
+                    if address['DatapointType'] == 'DPST-9-4':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"9.004:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f Lux]"
+                        semantic_info = "[\"Measurement\", \"Light\"]"
+                        item_icon = "sun"
+
+                    # Geschwindigkeit m/s
+                    if address['DatapointType'] == 'DPST-9-5':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"9.005:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f m/s]"
+                        semantic_info = "[\"Measurement\", \"Wind\"]"
+                        item_icon = "wind"
+
+                    # ppm
+                    if address['DatapointType'] == 'DPST-9-8':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"9.008:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f ppm]"
+                        semantic_info = "[\"Measurement\"]"
+
+                    # percent
+                    if address['DatapointType'] == 'DPST-5-1':
+                        auto_add = True
+                        item_type = "Dimmer"
+                        thing_address_info = f"ga=\"5.001:{address['Address']}\""
+                        item_label = f"{lovely_name} [%d %%]"
+                        semantic_info = "[\"Measurement\"]"
+
+
+                    # Zeitdifferenz 
+                    if address['DatapointType'] == 'DPST-13-100':
+                        auto_add = True
+                        item_type = "Number"
+                        thing_address_info = f"ga=\"13.100:{address['Address']}\""
+                        item_label = f"{lovely_name} [%.1f s]"
+                        semantic_info = "[\"Measurement\", \"Duration\"]"
+                        item_icon = "time"
+
+                    # Szene
+                    if address['DatapointType'] == 'DPST-17-1':
+                        used = True
+                        
+                        for description in descriptions:
+                            if description.startswith('mappings='):
+                                mappings = description
+                                break
+
+                        if mappings!= '':
+                            mapfile = f"gen_{item_name}.map"
+                            mappings = mappings.replace("'",'"')
+
+                            mapfile_content = mappings.replace('"','').replace(',','\n').replace('mappings=[','').replace(']','').replace(' ','')
+                            mapfile_content += '\n' + mapfile_content.replace('=','.0=') + '\n-=unknown'
+                            open(os.path.join(config['transform_dir_path'], mapfile),'w').write(mapfile_content)
+
+                            auto_add = True
+                            item_type = "Number"
+                            thing_address_info = f"ga=\"17.001:{address['Address']}\""
+                            item_label = f"{lovely_name} [MAP({mapfile}):%s]"
+                            semantic_info = "[\"Control\"]"
+                            item_icon = "movecontrol"
+                            sitemap_type = "Selection"
+                        else:
+                            print(f"no mapping for scene {address['Address']} {address['Group name']} ")
+                        #else:
+                        #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <movecontrol>          {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+                        #    group += f"        Selection item={item_name} label=\"{lovely_name}\"  {visibility}\n"
+                        
+                    # Szenensteuerung
+                    #if address['DatapointType'] == 'DPST-18-1':
+                    #    print(address)
+                    #    used = True
+                    #    things += f"Type number        : {item_name}        \"{address['Group name']}\"       [ ga=\"18.001:{address['Address']}\" ]\n"
+                    #    items += f"Number        {item_name}         \"{lovely_name} [%d]\"                <sun>  (map{floorNr}_{roomNr})        {{ channel=\"knx:device:bridge:generic:{item_name}\" }}\n"
+
                     # Status
                     if address['DatapointType'] == 'DPST-1-11':
                         auto_add = True
