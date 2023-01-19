@@ -22,13 +22,15 @@ there are some addons based on the description field of the GA in ETS. Multiple 
 - add `location` to add the [location](https://github.com/openhab/openhab-core/blob/main/bundles/org.openhab.core.semantics/model/SemanticTags.csv) to the first two layers of group addresses. Divide multiple by `,` 
 - add `semantic` to overwrite the default entries. (e.g. if a switch is controlling a projector: semantic=Projector). [Possible options](https://github.com/openhab/openhab-core/blob/main/bundles/org.openhab.core.semantics/model/SemanticTags.csv). Divide multiple by `,`  
 - add `icon` to set the icon. e.g. `icon=projector`
+- add `ignore` to competely disable the import for that GA
 
 (e.g. `semantic=Pump;icon=pump;debug;influx`)
 
 ## Processed types:
 ### Components determined only by GA
 - Temperature based on Datatype
-- Window Contact - based on Datatype 1.019
+- Humidity  based on Datatype
+- Window Contact based on Datatype 1.019
 - Electrical work (wh) based on Datatype    
 - Power (W) based on Datatype
 - Curent based on Datatype
@@ -38,6 +40,10 @@ there are some addons based on the description field of the GA in ETS. Multiple 
 - Speed m/s based on Datatype
 - Timedifference based on Datatype 13.100
 - Scene based on Datatype. Add for example `mappings=[63='Aus', 62='Automatik', 1='Kochen', 2='Beamer', 3='Allgemein']` to description in ETS to generate automatic mapping. MAP transformation plugin required!
+- ppm based on Datatype
+- Percent based on Datatype
+- Volume based on Datatype
+- String based on Datatype
 
 ### Components which need a naming scheme
 - Rollershutter based on Name

@@ -32,6 +32,9 @@ for row in reader:
     # normal group address
     else:
         splitter = row['Address'].split('/')
+        if 'ignore' in row['Description']:
+            print("ignoreflag in description for: " + row['Group name'])
+            continue
         house[splitter[0]]['rooms'][splitter[1]]['Addresses'].append(row)
 
 items = ''
